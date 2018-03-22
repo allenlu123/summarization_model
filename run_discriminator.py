@@ -15,7 +15,7 @@ from tensorflow.python import debug as tf_debug
 FLAGS = tf.app.flags.FLAGS
 
 # Where to find data
-tf.app.flags.DEFINE_string('data_path', 'dataset_bin/chunked/train_*', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
+tf.app.flags.DEFINE_string('data_path', 'dataset_bin/finished_files/chunked/train_*', 'Path expression to tf.Example datafiles. Can include wildcards to access multiple datafiles.')
 tf.app.flags.DEFINE_string('vocab_path', 'vocab', 'Path expression to text vocabulary file.')
 
 # Important settings
@@ -145,6 +145,8 @@ def run_training(model, batcher, sess_context_manager, sv, summary_writer):
 
       loss = results['loss']
       tf.logging.info('loss: %f', loss) # print the loss to screen
+      acc = results['acc']
+      tf.logging.info('accuracy: %f', acc) # print the accuracy to screen
 
       if not np.isfinite(loss):
         raise Exception("Loss is not finite. Stopping.")

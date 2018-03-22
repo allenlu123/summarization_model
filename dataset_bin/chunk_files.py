@@ -31,10 +31,11 @@ def chunk_file(set_name):
           example_str = struct.unpack('%ds' % str_len, a)[0]
         except:
           print(i)
-          raise Exception
+          return
         writer.write(struct.pack('q', str_len))
         writer.write(struct.pack('%ds' % str_len, example_str))
       chunk += 1
+      print('finished current chunk')
 
 
 def chunk_all():

@@ -19,12 +19,12 @@ class Discriminator(object):
     """Add placeholders to the graph. These are entry points for any input data."""
     hps = self._hps
 
-    self._enc_batch1 = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch')
-    self._enc_lens1 = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens')
-    # self._enc_padding_mask1 = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask')
-    self._enc_batch2 = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch')
-    self._enc_lens2 = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens')
-    # self._enc_padding_mask2 = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask')
+    self._enc_batch1 = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch1')
+    self._enc_lens1 = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens1')
+    # self._enc_padding_mask1 = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask1')
+    self._enc_batch2 = tf.placeholder(tf.int32, [hps.batch_size, None], name='enc_batch2')
+    self._enc_lens2 = tf.placeholder(tf.int32, [hps.batch_size], name='enc_lens2')
+    # self._enc_padding_mask2 = tf.placeholder(tf.float32, [hps.batch_size, None], name='enc_padding_mask2')
 
     self._labels = tf.placeholder(tf.int64, [hps.batch_size, 1], name='labels')
 
@@ -109,17 +109,24 @@ class Discriminator(object):
       # Add the decoder
       # Get time-major for getting last step
       decoder_outputs = tf.transpose(self._add_decoder(enc_outputs), [1, 0, 2])
-      last_step = tf.gather(decoder_outputs, int(decoder_outputs.get_shape[0]) - 1)
+      encoder_final_indices = tf.subtract(tf.add(self._enc_lens1, self._enc_lens2), 1)
+      final_indices = tf.stack([encoder_final_indices, tf.constant([i for i in range(hps.batch_size)])], axis=1)
+      last_step = tf.gather_nd(decoder_outputs, final_indices)
       logits = tf.contrib.layers.fully_connected(last_step, 1, activation_fn=None)
 
       if hps.mode in ['train', 'eval']:
         # Calculate the loss
         with tf.variable_scope('loss'):
+          logits = tf.reshape(logits, [hps.batch_size, 1])
           self._loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
               labels=tf.cast(self._labels, tf.float32),
-              logits=tf.cast(tf.reshape(logits, [hps.batch_size, 1]), tf.float32))
-
+              logits=tf.cast(logits, tf.float32)))
+          self._acc = tf.reduce_mean(
+              tf.cast(
+                 tf.equal(tf.cast(tf.round(tf.nn.sigmoid(logits)), tf.int64),
+                 self._labels), tf.float32))
           tf.summary.scalar('loss', self._loss)
+          tf.summary.scalar('acc', self._acc)
 
 
   def _add_train_op(self):
@@ -162,6 +169,7 @@ class Discriminator(object):
         'train_op': self._train_op,
         'summaries': self._summaries,
         'loss': self._loss,
+        'acc': self._acc,
         'global_step': self.global_step,
     }
     return sess.run(to_return, feed_dict)
@@ -172,6 +180,7 @@ class Discriminator(object):
     to_return = {
         'summaries': self._summaries,
         'loss': self._loss,
+        'acc': self._acc,
         'global_step': self.global_step,
     }
     return sess.run(to_return, feed_dict)

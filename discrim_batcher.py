@@ -88,7 +88,7 @@ class Batch(object):
 
     # Pad the encoder input sequences up to the length of the longest sequence
     for ex in example_list:
-      ex.pad_encoder_inputs(max_enc_seq_len1, max_encoder_seq_len2, self.pad_id)
+      ex.pad_encoder_inputs(max_enc_seq_len1, max_enc_seq_len2, self.pad_id)
 
     # Initialize the numpy arrays
     # Note: our enc_batch can have different length (second dimension) for each batch because we use dynamic_rnn for the encoder.
@@ -223,7 +223,7 @@ class Batcher(object):
       inputs = []
       for _ in xrange(self._hps.batch_size * self._bucketing_cache_size):
         inputs.append(self._example_queue.get())
-      inputs = sorted(inputs, key=lambda inp: inp.enc_len) # sort by length of encoder sequence
+      inputs = sorted(inputs, key=lambda inp: inp.enc_len1 + inp.enc_len2) # sort by length of encoder sequence
 
       # Group the sorted Examples into batches, optionally shuffle the batches, and place in the batch queue.
       batches = []
